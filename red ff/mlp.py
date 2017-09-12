@@ -123,6 +123,8 @@ def build_model(nn_hdim, num_passes=1, print_loss=False):
 
         # Forward propagation
         z1 = X.dot(W1) + b1
+        print("X.shape: ",X.shape)
+        print("W1.shape: ",W1.shape)
         a1 = np.tanh(z1)
         z2 = a1.dot(W2) + b2
         exp_scores = np.exp(z2)
