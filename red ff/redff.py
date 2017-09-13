@@ -4,13 +4,15 @@ import scipy.signal as sps
 from scipy.interpolate import InterpolatedUnivariateSpline
 import matplotlib.pyplot as plt
 from scipy.special import expit
+from math import sqrt
 
 head = ["Time","CBFV.C1","ABP","CBFV.C2","End-Tindal","CrCP.C1","RAP.C1","Heart Rate","Sistolic Pressure","Diastolic Pressure","POURCELOT'S INDEX  CHANNEL 1","MEAN SQUARE ERROR FOR P-V CH. 1","CrCP.C2","RAP.C2","SYSTOLIC  VEL. CH.1","DIASTOLIC VEL. CH.1","SYSTOLIC VELOCITY CH. 2","DIASTOLIC VELOCITY CH.2","POURCELOT INDEX CH. 2","MSE FOR P-V  CH. 2"]
 
 #Preprocesamiento: Captura de datos desde csv
 #Lectura de los datos de los sujetos en Hipercapnia
 pacient01H = pd.read_csv("Data\Hipercapnia\HC090161.csv", sep =";", header = None,names = head)
-pacient01HABP  = np.matrix(pacient01H["ABP"])
+pacient01HABP = sps.resample(pacient01H["ABP"], len(pacient01H["ABP"]/2))
+pacient01HABP  = np.matrix(pacient01HABP)
 pacient01HCBFV = pacient01H["CBFV.C1"]
 
 def generate_mlp(X,y,num_passes, Ne,Nc,Ns,alfa):
@@ -23,7 +25,9 @@ def generate_mlp(X,y,num_passes, Ne,Nc,Ns,alfa):
     W2 = np.random.randn(Nc, Ns) / np.sqrt(Nc)
     b2 = np.zeros((1, Ns))
     model = {}
+    errors = []
     y = np.matrix(y).T
+    num_examples = len(X)
     for i in range(0,num_passes):
         print("****************Calculo del forward propagation*********\n")
         print("X.shape: ",X.shape)
@@ -32,8 +36,8 @@ def generate_mlp(X,y,num_passes, Ne,Nc,Ns,alfa):
         z1 = X.dot(W1) + b1
         print("Z1.shape: ",z1.shape)
 
-        #hiddenlayer_activations = sigmoid(hidden_layer_input)
-        a1 = expit(z1)
+        #hiddenlayer_activations = activation(hidden_layer_input)
+        a1 = np.array(expit(z1))
         print("a1.shape: ",a1.shape)
 
         #output_layer_input = matrix_dot_product (hiddenlayer_activations * wout ) + bout
@@ -41,41 +45,45 @@ def generate_mlp(X,y,num_passes, Ne,Nc,Ns,alfa):
         print("Z2.shape: ",z2.shape)
 
         #output = sigmoid(output_layer_input)
-        yprima = np.array(expit(z2))
-
+        yestimada = np.array(expit(z2))
+        yderivada = yestimada*(1-yestimada)
         #E = y-output
-        print("Yprima.shape: ",yprima.shape)
+        print("Ypyestimadarima.shape: ",yestimada.shape)
         print("Y.shape: ",y.shape)
 
-        error = yprima-y
-        print("ERROR GENERAL ", error)
-        print("Error.shape", error.shape)
-        print("*******************Calculo del Backpropagation*****************\n")
-        #slope_output_layer = derivatives_sigmoid(output)
-        slope_output_layer = yprima*(1-yprima)
-        print("slope_output_layer.shape", slope_output_layer.shape)
+        error1 = mean_sq
+        error = yestimada-y
+        print("error.shape: ", error.shape)
 
-        #slope_hidden_layer = derivatives_sigmoid(hiddenlayer_activations)
-        slope_hidden_layer = a1*(a1-1)
+        print("\n*******************Calculo de Backpropagation*****************\n")
+        delta3 = np.empty_like(error)
+        for i in range(len(error)):
+            delta3[i] = error[i]*yderivada[i]
+        print("delta3.shape",delta3.shape)
 
-        #d_output = E * slope_output_layer
-        d_output = error * slope_output_layer
+        dW2 = (a1.T).dot(delta3)
+        print("dw2.shape",dW2.shape)
 
-        #Error_at_hidden_layer = matrix_dot_product(d_output, wout.Transpose)
-        error_at_hidden_layer = d_output.dot(W2)
-
-        #d_hiddenlayer = Error_at_hidden_layer * slope_hidden_layer
-        d_hiddenlayer = error_at_hidden_layer*slope_hidden_layer
+        #LISTO
+        db2 = np.sum(delta3)
+        delta2 = delta3.dot(W2.T) * (1 - np.power(a1, 2)).T
+        dW1 = np.dot(X.T, delta2)
+        db1 = np.sum(delta2, axis=0)
 
         #wout = wout + matrix_dot_product(hiddenlayer_activations.Transpose, d_output)*learning_rate
-        W2 = W2 + yprima.T.dot(d_output)*alfa
-        W1 = W1 +X.T.dot(d_hiddenlayer)*alfa
+        W1 += -alfa * dW1
+        W2 += -alfa * dW2
 
         #bh = bh + sum(d_hiddenlayer, axis=0) * learning_rate
-        b1 = b1+np.sum(d_hiddenlayer,axis = 0)*alfa
-        b2 = b2+np.sum(d_output,axis = 0)*alfa
+        #b1 += -alfa * db1
+        #b2 += -alfa * db2
 
-        model = { 'W1': W1, 'b1': b1, 'W2': W2, 'b2': b2}
-    return model
+        #model = { 'W1': W1, 'b1': b1, 'W2': W2, 'b2': b2}
+    return model,errors,num_passes
 
-generate_mlp(pacient01HABP.T,pacient01HCBFV.T,10,1,2,1,0.1)
+model,error,num_passes = generate_mlp(pacient01HABP.T,pacient01HCBFV.T,10,1,2,1,0.1)
+
+x = np.linspace(1,num_passes)
+
+plt.plot(error)
+plt.show()

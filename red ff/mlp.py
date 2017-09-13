@@ -127,6 +127,7 @@ def build_model(nn_hdim, num_passes=1, print_loss=False):
         print("W1.shape: ",W1.shape)
         a1 = np.tanh(z1)
         z2 = a1.dot(W2) + b2
+        #SALIDA
         exp_scores = np.exp(z2)
         probs = exp_scores / np.sum(exp_scores, axis=1, keepdims=True)
 
@@ -136,8 +137,9 @@ def build_model(nn_hdim, num_passes=1, print_loss=False):
         #print("z1 shape",z1.shape)
         # Backpropagation
         delta3 = probs
-        delta3[range(num_examples), y] -= 1
-        dW2 = (a1.T).dot(delta3)
+        print("Delta3.shape: ",delta3.shape)
+        delta3[range(num_examples), y] -= 1 #DERIVADA DE LA SALIDA
+        dW2 = (a1.T).dot(delta3)        #Derivada de la capa oculata
         db2 = np.sum(delta3, axis=0, keepdims=True)
         delta2 = delta3.dot(W2.T) * (1 - np.power(a1, 2))
         dW1 = np.dot(X.T, delta2)
