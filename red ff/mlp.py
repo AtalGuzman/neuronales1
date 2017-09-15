@@ -16,7 +16,7 @@ np.random.seed(3)
 #get the data from sklearn
 X, y = sklearn.datasets.make_moons(200, noise=0.20)
 plt.scatter(X[:,0], X[:,1], s=40, c=y, cmap=plt.cm.Spectral)
-
+print(y)
 #print("train data",X)
 #print("labels of data",y)
 

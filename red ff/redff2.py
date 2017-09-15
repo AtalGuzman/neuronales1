@@ -39,7 +39,23 @@ def super_retrasocosmico(data):
     print(array.shape)
     return array.T
 
-def build_model(X,y,nn_hdim, nn_input_dim, nn_output_dim, num_examples, print_loss=False, num_passes=1):
+def calculate_loss(model):
+    W1, b1, W2, b2 = model['W1'], model['b1'], model['W2'], model['b2']
+    # Forward propagation to calculate our predictions
+    z1 = X.dot(W1) + b1
+    a1 = np.tanh(z1)
+    z2 = a1.dot(W2) + b2
+    exp_scores = np.exp(z2)
+    probs = exp_scores / np.sum(exp_scores, axis=1, keepdims=True)
+    # Calculating the loss
+    corect_logprobs = -np.log(probs[range(num_examples), y])
+    data_loss = np.sum(corect_logprobs)
+    # Add regulatization term to loss (optional)
+    data_loss += reg_lambda/2 * (np.sum(np.square(W1)) + np.sum(np.square(W2)))
+    return 1./num_examples * data_loss
+
+    
+def build_model(X,y,nn_hdim, nn_input_dim, nn_output_dim, num_examples, epsilon, print_loss=False, num_passes=1):
     # Initialize the parameters to random values. We need to learn these.
     np.random.seed(0)
     W1 = np.random.randn(nn_input_dim, nn_hdim) / np.sqrt(nn_input_dim)
@@ -57,16 +73,10 @@ def build_model(X,y,nn_hdim, nn_input_dim, nn_output_dim, num_examples, print_lo
 
     # Gradient descent. For each batch...
     for i in range(0, num_passes):
-
         # Forward propagation
         z1 = X.dot(W1) + b1
-        print("X.shape: ",X.shape)
-        print("W1.shape: ",W1.shape)
         a1 = np.tanh(z1)
-        print("a1.shape: ",a1.shape)
         z2 = a1.dot(W2) + b2
-        print("W2.shape: ",W2.shape)
-        print("z2.shape: ",z2.shape)
         #SALIDA
 
         exp_scores = np.exp(z2)
@@ -80,7 +90,7 @@ def build_model(X,y,nn_hdim, nn_input_dim, nn_output_dim, num_examples, print_lo
         # Backpropagation
         delta3 = probs
         print("Delta3.shape: ",delta3.shape)
-        delta3[range(num_examples), y] -= 1 #DERIVADA DE LA SALIDA
+        delta3[range(num_examples)] -= 1 #DERIVADA DE LA SALIDA
         dW2 = (a1.T).dot(delta3)        #Derivada de la capa oculata
         db2 = np.sum(delta3, axis=0, keepdims=True)
         delta2 = delta3.dot(W2.T) * (1 - np.power(a1, 2))
@@ -88,8 +98,8 @@ def build_model(X,y,nn_hdim, nn_input_dim, nn_output_dim, num_examples, print_lo
         db1 = np.sum(delta2, axis=0)
 
         # Add regularization terms (b1 and b2 don't have regularization terms)
-        dW2 += reg_lambda * W2
-        dW1 += reg_lambda * W1
+        #dW2 += reg_lambda * W2
+        #dW1 += reg_lambda * W1
 
         # Gradient descent parameter update
         W1 += -epsilon * dW1
@@ -147,4 +157,4 @@ abp3N = np.array(super_retrasocosmico(abp3N))
 abp4N = np.array(super_retrasocosmico(abp4N))
 abp5N = np.array(super_retrasocosmico(abp5N))
 
-build_model(abp1H,cbfv1H,50, 3, 1, len(abp1H), num_passes=100)
+build_model(abp1H,cbfv1H,50, 3, 1, len(abp1H), epsilon = 0.2, num_passes=100)
