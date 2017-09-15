@@ -36,25 +36,24 @@ def super_retrasocosmico(data):
         array3.append(data[i])
     array = [array1,array2,array3]
     array = np.array(array)
-    print(array.shape)
     return array.T
 
-def calculate_loss(model):
+def calculate_loss1(X,yprima,y,model):
     W1, b1, W2, b2 = model['W1'], model['b1'], model['W2'], model['b2']
     # Forward propagation to calculate our predictions
     z1 = X.dot(W1) + b1
     a1 = np.tanh(z1)
     z2 = a1.dot(W2) + b2
-    exp_scores = np.exp(z2)
-    probs = exp_scores / np.sum(exp_scores, axis=1, keepdims=True)
+    yprima = expit(z2)
     # Calculating the loss
-    corect_logprobs = -np.log(probs[range(num_examples), y])
-    data_loss = np.sum(corect_logprobs)
+    error = yprima-y
+    for i in range(len(error)):
+        error[i] = (error[i])**2
+    data_loss = np.sum(error)/len(error)
     # Add regulatization term to loss (optional)
-    data_loss += reg_lambda/2 * (np.sum(np.square(W1)) + np.sum(np.square(W2)))
-    return 1./num_examples * data_loss
+    return data_loss
 
-    
+
 def build_model(X,y,nn_hdim, nn_input_dim, nn_output_dim, num_examples, epsilon, print_loss=False, num_passes=1):
     # Initialize the parameters to random values. We need to learn these.
     np.random.seed(0)
@@ -78,19 +77,16 @@ def build_model(X,y,nn_hdim, nn_input_dim, nn_output_dim, num_examples, epsilon,
         a1 = np.tanh(z1)
         z2 = a1.dot(W2) + b2
         #SALIDA
-
-        exp_scores = np.exp(z2)
-        probs = exp_scores / np.sum(exp_scores, axis=1, keepdims=True)
-
-        y = 1/(1+np.exp(-z2))
+        yprima = expit(z2)
         #print("FORWARD STAGE")
         #print("z1 shape",z1.shape)
         #print("a1 shape",z1.shape)
         #print("z1 shape",z1.shape)
         # Backpropagation
-        delta3 = probs
+        delta3 = yprima
         print("Delta3.shape: ",delta3.shape)
-        delta3[range(num_examples)] -= 1 #DERIVADA DE LA SALIDA
+        for j in range(len(delta3)): #DERIVADA DE LA SALIDA
+            delta3[j] = delta3[j]*(1-delta3[j])
         dW2 = (a1.T).dot(delta3)        #Derivada de la capa oculata
         db2 = np.sum(delta3, axis=0, keepdims=True)
         delta2 = delta3.dot(W2.T) * (1 - np.power(a1, 2))
@@ -107,13 +103,10 @@ def build_model(X,y,nn_hdim, nn_input_dim, nn_output_dim, num_examples, epsilon,
         W2 += -epsilon * dW2
         b2 += -epsilon * db2
 
-        # Assign new parameters to the model
         model = { 'W1': W1, 'b1': b1, 'W2': W2, 'b2': b2}
-
-        # Optionally print the loss.
-        # This is expensive because it uses the whole dataset, so we don't want to do it too often.
-        if print_loss and i % 1000 == 0:
-          print("Loss after iteration %i: %f" %(i, calculate_loss(model)))
+        if print_loss:
+            print(i)
+            print("Loss after iteration %i: %f",(i, calculate_loss1(X,yprima,y,model)))
 
     return model
 
@@ -157,4 +150,4 @@ abp3N = np.array(super_retrasocosmico(abp3N))
 abp4N = np.array(super_retrasocosmico(abp4N))
 abp5N = np.array(super_retrasocosmico(abp5N))
 
-build_model(abp1H,cbfv1H,50, 3, 1, len(abp1H), epsilon = 0.2, num_passes=100)
+build_model(abp1H,cbfv1H,10, 3, 1, len(abp1H), epsilon = 0.2, num_passes=10, print_loss = True)

@@ -138,7 +138,9 @@ def build_model(nn_hdim, num_passes=1, print_loss=False):
         # Backpropagation
         delta3 = probs
         print("Delta3.shape: ",delta3.shape)
+        print(delta3.T)
         delta3[range(num_examples), y] -= 1 #DERIVADA DE LA SALIDA
+        print(delta3.T)
         dW2 = (a1.T).dot(delta3)        #Derivada de la capa oculata
         db2 = np.sum(delta3, axis=0, keepdims=True)
         delta2 = delta3.dot(W2.T) * (1 - np.power(a1, 2))
