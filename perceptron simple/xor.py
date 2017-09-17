@@ -6,10 +6,10 @@ import matplotlib.pyplot as plt
 unit_step = lambda x: 0 if x < 0 else 1
 
 #data to learn, column 2 is the bias
-training_data = [ (array([0,0,1]), 0),
+training_data = [ (array([0,0,1]), 1),
 		(array([0,1,1]), 1),
 		(array([1,0,1]), 1),
-		(array([1,1,1]), 0), ]
+		(array([1,1,1]), 0)]
 
 w = random.rand(3)
 print(w.shape)
